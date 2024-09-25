@@ -19,7 +19,7 @@ const swaggerDocument = yamljs.load('./docs/swagger.yaml')
 
 
 // ]
-
+//swag
 const games = [
     {id: 1, name: "Witcher 3", price: 29.99},
     {id: 2, name: "Cyberpunk 2077", price: 59.99},
