@@ -42,8 +42,6 @@ const games = [
 
 
 
-
-
 app.get('/games', (req, res) => {
     res.send(games)
 
