@@ -1,0 +1,43 @@
+body {
+    background-color: #f8f9fa;
+}
+
+#main-title {
+    color: #007bff;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+#gamesTable {
+    margin-top: 20px;
+}
+
+.modal-title {
+    color: #007bff;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+.modal-header, .modal-footer {
+    background-color: #f1f1f1;
+}
+
+.modal-body {
+    background-color: #fff;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.btn-close {
+    color: #ff0000;
+}
+
+.container {
+    margin-top: 30px;
+}

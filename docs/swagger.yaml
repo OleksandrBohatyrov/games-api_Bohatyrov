@@ -20,7 +20,7 @@ paths:
                                 List of games:
                                     value:
                                         - Witcher 3
-                                        - Cyberpunk 2077
+                                        - STALCRAFT:X
                     description: Returns a list of games
             summary: Get a list of a games
             description: Returns a list of games
