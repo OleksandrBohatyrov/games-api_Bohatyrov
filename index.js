@@ -1,91 +1,83 @@
-const express = require('express')
-const cors = require('cors')
-const fs = require('fs')
-const swaggerUi = require('swagger-ui-express')
-const yamljs = require('yamljs')
-const swaggerDocument = yamljs.load('./docs/swagger.yaml')
-const app = express()
-const port = 8080
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const Game = require('./models/game'); // Импорт модели игры
 
-app.use(cors())
-app.use(express.json())
+const app = express();
+app.use(express.json()); // Middleware для работы с JSON
 
-let games = []
+// Подключение к MongoDB Atlas
+const uri = 'mongodb+srv://oleksandrbohatyrov:oleksandrbohatyrov@cluster0.crul0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch((error) => console.error('Error connecting to MongoDB Atlas:', error));
 
-// Функция для загрузки игр из файла
-function loadGames() {
-    if (fs.existsSync('games.json')) {
-        const data = fs.readFileSync('games.json', 'utf8')
-        games = JSON.parse(data)
-    } else {
-        games = [] // Если файл не существует, начинаем с пустого массива
+// Обслуживание статических файлов
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Маршрут для получения списка игр
+app.get('/games', async (req, res) => {
+    try {
+        const games = await Game.find();
+        res.json(games);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-}
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
+});
 
-// Функция для сохранения игр в файл
-function saveGames() {
-    fs.writeFileSync('games.json', JSON.stringify(games, null, 2))
-}
+// Маршрут для добавления новой игры
+app.post('/games', async (req, res) => {
+    try {
+        const lastGame = await Game.findOne().sort({ id: -1 });
+        const newId = lastGame ? lastGame.id + 1 : 1;
 
-// Загружаем игры при старте сервера
-loadGames()
+        const game = new Game({
+            id: newId,
+            name: req.body.name,
+            price: req.body.price
+        });
 
-// Get list of games
-app.get('/games', (req, res) => {
-    res.send(games)
-})
-
-// Get details of a game by id
-app.get('/games/:id', (req, res) => {
-    const game = games.find(game => game.id === parseInt(req.params.id))
-    if (!game) return res.status(404).send({error: "Game not found"})
-    res.send(game)
-})
-
-// Add new game
-app.post('/games', (req, res) => {
-    if (!req.body.name || req.body.price === undefined) {
-        return res.status(400).send({error: 'One or all params are missing'})
+        const newGame = await game.save();
+        res.status(201).json(newGame);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
     }
+});
 
-    const newGame = {
-        id: games.length + 1,
-        name: req.body.name,
-        price: parseFloat(req.body.price)
+// Маршрут для обновления игры
+app.put('/games/:id', async (req, res) => {
+    try {
+        const game = await Game.findOne({ id: req.params.id });
+        if (!game) return res.status(404).json({ message: 'Game not found' });
+
+        game.name = req.body.name || game.name;
+        game.price = req.body.price || game.price;
+
+        const updatedGame = await game.save();
+        res.json(updatedGame);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
     }
+});
 
-    games.push(newGame)
-    saveGames() // Сохраняем изменения в файл
-    res.status(201).send(newGame)
-})
+// Маршрут для удаления игры
+app.delete('/games/:id', async (req, res) => {
+    try {
+        const game = await Game.findOne({ id: req.params.id });
+        if (!game) return res.status(404).json({ message: 'Game not found' });
 
+        await game.remove();
+        res.json({ message: 'Game deleted' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
-// Update game by id
-app.put('/games/:id', (req, res) => {
-    const gameIndex = games.findIndex(game => game.id === parseInt(req.params.id))
-    if (gameIndex === -1) return res.status(404).send({error: "Game not found"})
-
-    games[gameIndex].name = req.body.name
-    games[gameIndex].price = parseFloat(req.body.price)
-    saveGames() // Сохраняем изменения в файл
-    res.send(games[gameIndex])
-})
-
-// Delete game by id and update ids
-app.delete('/games/:id', (req, res) => {
-    const gameIndex = games.findIndex(game => game.id === parseInt(req.params.id))
-    if (gameIndex === -1) return res.status(404).send({error: "Game not found"})
-
-    games.splice(gameIndex, 1)
-
-    // Update ids after deletion
-    games = games.map((game, index) => ({ ...game, id: index + 1 }))
-    saveGames() // Сохраняем изменения в файл
-
-    res.status(204).send()
-})
-
+// Запуск сервера
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`API up at: http://localhost:${port}`)
-})
+    console.log(`Server running on port ${port}`);
+});
