@@ -1,100 +1,91 @@
-//api
-//backend
-// const app = require('express')()
 const express = require('express')
 const cors = require('cors')
-const app = express()
-const port = 8080
+const fs = require('fs')
 const swaggerUi = require('swagger-ui-express')
-// const swaggerDocument = require('./docs/swagger.json');
 const yamljs = require('yamljs')
 const swaggerDocument = yamljs.load('./docs/swagger.yaml')
-
-// const games = [
-//     "Witcher 3",
-//     "Cyberpunk 2077",
-//     "Minecraft",
-//     "Counter-Strike: Global Offensive",
-//     "Roblox",
-//     "Grand Theft Auto V",
-//     "Valorant",
-//     "Forza Horizon 5"
-
-
-// ]
-//swag
+const app = express()
+const port = 8080
 
 app.use(cors())
 app.use(express.json())
-const games = [
-    {id: 1, name: "Witcher 3", price: 29.99},
-    {id: 2, name: "Cyberpunk 2077", price: 59.99},
-    {id: 3, name: "Minecraft", price: 26.99},
-    {id: 4, name: "Roblox", price: 0},
-    {id: 5, name: "Grand Thef Auto V", price: 29.99},
-    {id: 6, name: "Valorant", price: 0},
-    {id: 7, name: "Counter-Strike: Global Offensive", price: 0},
-    {id: 8, name: "Forza Horizon 5", price: 59.99},
 
+let games = []
 
-]
-
-
-
-
-
-
-app.get('/games', (req, res) => {
-    res.send(games)
-
-})
-
-//details of the game
-
-app.get('/games/:id',  (req, res) => {
-        if (typeof games[req.params.id - 1] === 'undefined') {
-            return res.status(404).send({error: "Game not found"})
-        }
-
-        res.send(games[req.params.id - 1])
-})
-
-app.post('/games', (req, res) => {
-    if (!req.body.name || !req.body.price) {
-
-        return res.status(400).send({error: 'One or all params are missing'})
+// Функция для загрузки игр из файла
+function loadGames() {
+    if (fs.existsSync('games.json')) {
+        const data = fs.readFileSync('games.json', 'utf8')
+        games = JSON.parse(data)
+    } else {
+        games = [] // Если файл не существует, начинаем с пустого массива
     }
-    let game = {
-        id: games.length +1,
-        price: req.body.price,
-        name: req.body.name
-    }
-
-    games.push(game) 
-    res.status(201).location(`${getBaseUrl(req)}/games/${games.length}`).send(game)
-    
-    res.end()
-})
-
-app.delete('/games/:id', (req,res) => {
-    if (typeof games[req.params.id -1] === 'undefined'){
-        return res.status(404).send({error: "Game not found"})
-    }
-
-    games.splice(req.params.id -1, 1)
-
-    res.status(204).send({error: "No content"})
-})
-
+}
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
-app.listen(port, () => {
+// Функция для сохранения игр в файл
+function saveGames() {
+    fs.writeFileSync('games.json', JSON.stringify(games, null, 2))
+}
 
-    console.log(`API up at: http://localhost:${port}`)
+// Загружаем игры при старте сервера
+loadGames()
+
+// Get list of games
+app.get('/games', (req, res) => {
+    res.send(games)
+})
+
+// Get details of a game by id
+app.get('/games/:id', (req, res) => {
+    const game = games.find(game => game.id === parseInt(req.params.id))
+    if (!game) return res.status(404).send({error: "Game not found"})
+    res.send(game)
+})
+
+// Add new game
+app.post('/games', (req, res) => {
+    if (!req.body.name || req.body.price === undefined) {
+        return res.status(400).send({error: 'One or all params are missing'})
+    }
+
+    const newGame = {
+        id: games.length + 1,
+        name: req.body.name,
+        price: parseFloat(req.body.price)
+    }
+
+    games.push(newGame)
+    saveGames() // Сохраняем изменения в файл
+    res.status(201).send(newGame)
 })
 
 
-function getBaseUrl(req) {
-    return req.connection && req.connection.encrypted
-        ? 'https' : 'http' + `://${req.headers.host}`
-}
+// Update game by id
+app.put('/games/:id', (req, res) => {
+    const gameIndex = games.findIndex(game => game.id === parseInt(req.params.id))
+    if (gameIndex === -1) return res.status(404).send({error: "Game not found"})
+
+    games[gameIndex].name = req.body.name
+    games[gameIndex].price = parseFloat(req.body.price)
+    saveGames() // Сохраняем изменения в файл
+    res.send(games[gameIndex])
+})
+
+// Delete game by id and update ids
+app.delete('/games/:id', (req, res) => {
+    const gameIndex = games.findIndex(game => game.id === parseInt(req.params.id))
+    if (gameIndex === -1) return res.status(404).send({error: "Game not found"})
+
+    games.splice(gameIndex, 1)
+
+    // Update ids after deletion
+    games = games.map((game, index) => ({ ...game, id: index + 1 }))
+    saveGames() // Сохраняем изменения в файл
+
+    res.status(204).send()
+})
+
+app.listen(port, () => {
+    console.log(`API up at: http://localhost:${port}`)
+})

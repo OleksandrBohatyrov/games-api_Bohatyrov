@@ -1,7 +1,9 @@
 body {
     background-color: #f8f9fa;
 }
-
+.action-btn {
+    margin-right: 10px;
+}
 #main-title {
     color: #007bff;
     font-weight: 700;
@@ -9,6 +11,7 @@ body {
     margin-top: 20px;
     margin-bottom: 20px;
 }
+
 
 #gamesTable {
     margin-top: 20px;

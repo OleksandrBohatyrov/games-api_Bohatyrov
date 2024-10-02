@@ -26,40 +26,42 @@ const vue = Vue.createApp({
             this.gameInfoModalInstance.show();
         },
 
-        // Close the modal
-        closeModal() {
-            if (this.gameInfoModalInstance) {
-                this.gameInfoModalInstance.hide();
-            }
-            if (this.newGameModalInstance) {
-                this.newGameModalInstance.hide();
-            }
+        // Open the modal for editing a game
+        editGame: async function(id) {
+            const response = await fetch(`http://localhost:8080/games/${id}`);
+            this.gameInModal = await response.json();
+            this.gameInfoModalInstance = new bootstrap.Modal(document.getElementById('gameInfoModal'), {});
+            this.gameInfoModalInstance.show();
         },
 
-        // Open the new modal for inserting a game and reset the values
-        openNewGameModal() {
-            // Close the current modal
-            if (this.gameInfoModalInstance) {
-                this.gameInfoModalInstance.hide();
+        // Update the edited game
+        updateGame: async function(id) {
+            const updatedGame = {
+                name: this.gameInModal.name,
+                price: this.gameInModal.price
+            };
+
+            const response = await fetch(`http://localhost:8080/games/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(updatedGame)
+            });
+
+            if (response.ok) {
+                this.fetchGames(); // Refresh the game list
+                this.closeModal(); // Close the modal after updating
+            } else {
+                alert('Error updating game');
             }
-
-            // Reset the new game object
-            this.newGame = {name: '', price: 0};
-
-            // Show the new modal
-            this.newGameModalInstance = new bootstrap.Modal(document.getElementById('newGameModal'), {});
-            this.newGameModalInstance.show();
         },
 
         // Insert the new game
         insertNewGame: async function() {
-            // Prepare the game data
             const newGame = {
                 name: this.newGame.name,
                 price: this.newGame.price
             };
 
-            // Make a POST request to insert the new game
             const response = await fetch('http://localhost:8080/games', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -73,7 +75,6 @@ const vue = Vue.createApp({
             } else {
                 alert('Error inserting game');
             }
-
         },
 
         // Delete the selected game
@@ -85,8 +86,7 @@ const vue = Vue.createApp({
                     });
 
                     if (response.ok) {
-                        // After successful deletion, refetch the games
-                        this.fetchGames();
+                        this.fetchGames(); // Refresh the game list after deletion
                     } else {
                         alert('Error deleting game');
                     }
@@ -95,6 +95,23 @@ const vue = Vue.createApp({
                     alert('Error occurred while deleting the game.');
                 }
             }
+        },
+
+        // Close the modal
+        closeModal() {
+            if (this.gameInfoModalInstance) {
+                this.gameInfoModalInstance.hide();
+            }
+            if (this.newGameModalInstance) {
+                this.newGameModalInstance.hide();
+            }
+        },
+
+        // Open the new modal for inserting a game and reset the values
+        openNewGameModal() {
+            this.newGame = {name: '', price: 0}; // Reset new game data
+            this.newGameModalInstance = new bootstrap.Modal(document.getElementById('newGameModal'), {});
+            this.newGameModalInstance.show();
         }
     }
 }).mount('#app');
